@@ -50,3 +50,14 @@ func (e *GCloudSSHExecutor) Exec(command string, node *v1.Node, stdin io.Reader)
 	klog.V(2).Infof("ssh to %q finished with %q: %v", node.Name, string(output), err)
 	return err
 }
+
+type AzureSSHExecutor struct{}
+
+func (e *AzureSSHExecutor) Exec(command string, node *v1.Node, stdin io.Reader) error {
+	clusterName := node.Annotations["cluster.x-k8s.io/cluster-name"]
+	cmd := exec.Command("az", "vm", "run-command", "invoke", "--name", node.Name, "--resource-group", clusterName, "--command-id", "RunShellScript", "--scripts", command)
+	cmd.Stdin = stdin
+	output, err := cmd.CombinedOutput()
+	klog.V(2).Infof("ssh to %q finished with %q: %v", node.Name, string(output), err)
+	return err
+}

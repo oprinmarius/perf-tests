@@ -67,8 +67,8 @@ func InitFlags(p *config.PrometheusConfig) {
 	flags.IntEnvVar(&p.APIServerScrapePort, "prometheus-apiserver-scrape-port", "PROMETHEUS_APISERVER_SCRAPE_PORT", 443, "Port for scraping kube-apiserver (default 443).")
 	flags.StringEnvVar(&p.SnapshotProject, "experimental-snapshot-project", "PROJECT", "", "GCP project used where disks and snapshots are located.")
 	flags.StringEnvVar(&p.ManifestPath, "prometheus-manifest-path", "PROMETHEUS_MANIFEST_PATH", "$GOPATH/src/k8s.io/perf-tests/clusterloader2/pkg/prometheus/manifests", "Path to the prometheus manifest files.")
-	flags.StringEnvVar(&p.StorageClassProvisioner, "prometheus-storage-class-provisioner", "PROMETHEUS_STORAGE_CLASS_PROVISIONER", "kubernetes.io/gce-pd", "Volumes plugin used to provision PVs for Prometheus.")
-	flags.StringEnvVar(&p.StorageClassVolumeType, "prometheus-storage-class-volume-type", "PROMETHEUS_STORAGE_CLASS_VOLUME_TYPE", "pd-ssd", "Volume types of storage class, This will be different depending on the provisioner.")
+	flags.StringEnvVar(&p.StorageClassProvisioner, "prometheus-storage-class-provisioner", "PROMETHEUS_STORAGE_CLASS_PROVISIONER", "disk.csi.azure.com", "Volumes plugin used to provision PVs for Prometheus.")
+	flags.StringEnvVar(&p.StorageClassVolumeType, "prometheus-storage-class-volume-type", "PROMETHEUS_STORAGE_CLASS_VOLUME_TYPE", "StandardSSD_LRS", "Volume types of storage class, This will be different depending on the provisioner.")
 	flags.DurationEnvVar(&p.ReadyTimeout, "prometheus-ready-timeout", "PROMETHEUS_READY_TIMEOUT", 15*time.Minute, "Timeout for waiting for Prometheus stack to become healthy.")
 }
 
@@ -115,6 +115,7 @@ func CompleteConfig(p *config.PrometheusConfig) {
 	p.MetricsServerManifests = p.ManifestPath + "/exporters/metrics-server/*.yaml"
 	p.NodeExporterPod = p.ManifestPath + "/exporters/node_exporter/node-exporter.yaml"
 	p.PushgatewayManifests = p.ManifestPath + "/pushgateway/*.yaml"
+	p.WindowsNodeExporterManifests = p.ManifestPath + "/exporters/windows_node_exporter/*.yaml"
 }
 
 // NewController creates a new instance of Controller for the given config.
@@ -184,7 +185,8 @@ func NewController(clusterLoaderConfig *config.ClusterLoaderConfig) (pc *Control
 
 	pc.templateMapping = mapping
 
-	pc.ssh = &util.GCloudSSHExecutor{}
+	//pc.ssh = &util.GCloudSSHExecutor{}
+	pc.ssh = &util.AzureSSHExecutor{}
 
 	return pc, nil
 }
@@ -201,7 +203,7 @@ func (pc *Controller) SetUpPrometheusStack() error {
 	}
 	// If enabled scraping windows node, need to setup windows node and template mapping
 	if isWindowsNodeScrapingEnabled(pc.templateMapping, pc.clusterLoaderConfig) {
-		if err := setUpWindowsNodeAndTemplate(k8sClient, pc.templateMapping); err != nil {
+		if err := pc.applyManifests(pc.clusterLoaderConfig.PrometheusConfig.WindowsNodeExporterManifests); err != nil {
 			return err
 		}
 	}

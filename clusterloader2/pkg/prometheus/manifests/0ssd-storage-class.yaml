@@ -1,5 +1,5 @@
-{{$PROMETHEUS_STORAGE_CLASS_PROVISIONER := DefaultParam .PROMETHEUS_STORAGE_CLASS_PROVISIONER "kubernetes.io/gce-pd"}}
-{{$PROMETHEUS_STORAGE_CLASS_VOLUME_TYPE := DefaultParam .PROMETHEUS_STORAGE_CLASS_VOLUME_TYPE "pd-ssd"}}
+{{$PROMETHEUS_STORAGE_CLASS_PROVISIONER := DefaultParam .PROMETHEUS_STORAGE_CLASS_PROVISIONER "disk.csi.azure.com"}}
+{{$PROMETHEUS_STORAGE_CLASS_VOLUME_TYPE := DefaultParam .PROMETHEUS_STORAGE_CLASS_VOLUME_TYPE "StandardSSD_LRS"}}
 
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
@@ -7,7 +7,7 @@ metadata:
   name: ssd
 provisioner: {{$PROMETHEUS_STORAGE_CLASS_PROVISIONER}}
 parameters:
-  type: {{$PROMETHEUS_STORAGE_CLASS_VOLUME_TYPE}}
+  skuName: {{$PROMETHEUS_STORAGE_CLASS_VOLUME_TYPE}}
 {{if .RetainPD}}
 reclaimPolicy: Retain
 {{end}}
