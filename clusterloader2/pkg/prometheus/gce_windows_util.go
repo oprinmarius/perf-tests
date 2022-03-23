@@ -59,6 +59,7 @@ func setUpWindowsNodeAndTemplate(k8sClient kubernetes.Interface, mapping map[str
 }
 
 func isWindowsNodeScrapingEnabled(mapping map[string]interface{}, clusterLoaderConfig *config.ClusterLoaderConfig) bool {
+	klog.V(2).Infof("WINDOWS_NODE_TEST value is %s , Scraping enabled: %s", mapping["WINDOWS_NODE_TEST"], clusterLoaderConfig.ClusterConfig.Provider.Features().SupportWindowsNodeScraping)
 	if windowsNodeTest, exists := mapping["WINDOWS_NODE_TEST"]; exists && windowsNodeTest.(bool) && clusterLoaderConfig.ClusterConfig.Provider.Features().SupportWindowsNodeScraping {
 		return true
 	}

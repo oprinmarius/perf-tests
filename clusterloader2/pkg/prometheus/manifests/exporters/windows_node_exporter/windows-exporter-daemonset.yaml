@@ -55,7 +55,7 @@ metadata:
 data:
   config.yml: |
     collectors:
-      enabled: '[defaults],container'
+      enabled: '[defaults],os,container'
     collector:
       service:
-        services-where: "Name='containerd' or Name='kubelet'"
+        services-where: "Name='containerd' or Name='kubelet' or Name='windows_exporter'"

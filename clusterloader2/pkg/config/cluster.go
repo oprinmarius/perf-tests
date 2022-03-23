@@ -73,6 +73,7 @@ type PrometheusConfig struct {
 	EnablePushgateway            bool
 	ScrapeEtcd                   bool
 	ScrapeNodeExporter           bool
+	ScrapeWindowsNodeExporter    bool
 	ScrapeKubelets               bool
 	ScrapeMasterKubelets         bool
 	ScrapeKubeProxy              bool
