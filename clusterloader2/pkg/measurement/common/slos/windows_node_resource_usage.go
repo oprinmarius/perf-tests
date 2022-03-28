@@ -31,11 +31,12 @@ import (
 const (
 	windowsResourceUsagePrometheusMeasurementName = "WindowsResourceUsagePrometheus"
 	// get top 10 non-system processes with highest cpu usage within 1min query window size
-	cpuUsageQueryTop10 = `topk(10, sum by (process) (irate(wmi_process_cpu_time_total{process!~"Idle|Total|System"}[5m]) / on(job) group_left wmi_cs_logical_processors) * 100)`
+	cpuUsageQueryTop10 = `topk(10, sum by (process) (irate(windows_cpu_time_total{process!~"Idle|Total|System"}[5m]) / on(job) group_left windows_cs_logical_processors) * 100)`
+	// cpuUsageQueryTop10 = `topk(10, sum(irate(windows_cpu_time_total{kubernetes_container_name=~".+", kubernetes_namespace=~".+"}[1m])) by (kubernetes_namespace,kubernetes_container_name))`
 	// cpu usage metrics file name prefix
 	cpuUsageMetricsName = "WindowsCPUUsagePrometheus"
 	// get top 10 non-system processes with highest memory usage
-	memoryUsageQueryTop10 = `topk(10, sum(wmi_process_working_set{process!~"Idle|Total|System"}) by (process))`
+	memoryUsageQueryTop10 = `topk(10, sum(windows_container_memory_usage_private_working_set_bytes{process!~"Idle|Total|System"}) by (process))`
 	// memory usage metrics file name prefix
 	memoryUsageMetricsName                    = "WindowsMemoryUsagePrometheus"
 	currentWindowsResourceUsageMetricsVersion = "v1"
@@ -100,10 +101,13 @@ func convertToMemoryPerfData(samples []*model.Sample) *measurementutil.PerfData 
 }
 
 func getSummary(query string, converter convertFunc, metricsName string, measurementTime time.Time, executor common.QueryExecutor, config *measurement.Config) (measurement.Summary, error) {
+	// klog.V(2).Info("Query: ", query)
+	// klog.V(2).Info("MeasurementTime: ", measurementTime)
 	samples, err := executor.Query(query, measurementTime)
 	if err != nil {
 		return nil, err
 	}
+	klog.V(2).Info("Samples ", samples)
 	content, err := util.PrettyPrintJSON(converter(samples))
 	if err != nil {
 		return nil, err
@@ -118,10 +122,12 @@ func getSummary(query string, converter convertFunc, metricsName string, measure
 // Gather gathers the metrics and convert to json summary
 func (w *windowsResourceUsageGatherer) Gather(executor common.QueryExecutor, startTime, endTime time.Time, config *measurement.Config) ([]measurement.Summary, error) {
 	cpuSummary, err := getSummary(cpuUsageQueryTop10, convertToCPUPerfData, cpuUsageMetricsName, endTime, executor, config)
+	// klog.V(2).Info("CPU Summary: ", cpuSummary)
 	if err != nil {
 		return nil, err
 	}
 	memorySummary, err := getSummary(memoryUsageQueryTop10, convertToMemoryPerfData, memoryUsageMetricsName, endTime, executor, config)
+	// klog.V(2).Info("Memory Summary: ", memorySummary)
 	if err != nil {
 		return nil, err
 	}
