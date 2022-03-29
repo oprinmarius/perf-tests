@@ -42,6 +42,10 @@ const (
 	nodeStorageUsageQuery       = `sum(windows_logical_disk_size_bytes) by (volume)`
     // node storage usage file name prefix
     nodeStorageUsageMetricsName = "WindowsNodeStorage"
+    // get the total open file descriptors
+	openFilesQuery       = `sum(process_open_fds{service="kubelet"})`
+    // open files metrics file name prefix
+    openFilesMetricsName = "WindowsOpenFiles"
 	currentWindowsResourceUsageMetricsVersion = "v1"
 )
 
@@ -120,6 +124,23 @@ func convertToStoragePerfData(samples []*model.Sample) *measurementutil.PerfData
 	return perfData
 }
 
+func convertToOpenFilesPerfData(samples []*model.Sample) *measurementutil.PerfData {
+	perfData := &measurementutil.PerfData{Version: currentWindowsResourceUsageMetricsVersion}
+	for _, sample := range samples {
+		item := measurementutil.DataItem{
+			Data: map[string]float64{
+				"Open File Handles": math.Round(float64(sample.Value)),
+			},
+			Unit: "Files",
+			Labels: map[string]string{
+				"Job": string(sample.Metric["job"]),
+			},
+		}
+		perfData.DataItems = append(perfData.DataItems, item)
+	}
+	return perfData
+}
+
 func getSummary(query string, converter convertFunc, metricsName string, measurementTime time.Time, executor common.QueryExecutor, config *measurement.Config) (measurement.Summary, error) {
 	samples, err := executor.Query(query, measurementTime)
 	if err != nil {
@@ -150,5 +171,9 @@ func (w *windowsResourceUsageGatherer) Gather(executor common.QueryExecutor, sta
 	if err != nil {
 		return nil, err
 	}
-	return []measurement.Summary{cpuSummary, memorySummary, nodeStorageSummary}, nil
+    openFilesSummary, err := getSummary(openFilesQuery, convertToOpenFilesPerfData, openFilesMetricsName, endTime, executor, config)
+	if err != nil {
+		return nil, err
+	}
+	return []measurement.Summary{cpuSummary, memorySummary, nodeStorageSummary, openFilesSummary}, nil
 }
